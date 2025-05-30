@@ -1,0 +1,808 @@
+openapi: 3.0.0
+info:
+  title: Little Lemon API
+  version: 1.0.0
+  description: API for Little Lemon restaurant. Manage authentication, menu, orders, cart, and user groups.
+servers:
+  - url: http://127.0.0.1:8000
+paths:
+  /auth/users/:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterInput'
+            examples:
+              registerExample:
+                summary: Register example
+                value:
+                  username: "newuser"
+                  email: "newuser@example.com"
+                  password: "password123"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                successExample:
+                  value:
+                    id: 10
+                    username: "newuser"
+                    email: "newuser@example.com"
+                    groups: []
+        '400':
+          description: Invalid data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                errorExample:
+                  value:
+                    username: ["A user with that username already exists."]
+  /auth/token/login/:
+    post:
+      summary: Obtain authentication token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+            examples:
+              loginExample:
+                value:
+                  username: "newuser"
+                  password: "password123"
+      responses:
+        '200':
+          description: Token obtained
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auth_token:
+                    type: string
+              examples:
+                tokenExample:
+                  value:
+                    auth_token: "abc123token"
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  non_field_errors:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                errorExample:
+                  value:
+                    non_field_errors: ["Unable to log in with provided credentials."]
+  /auth/token/logout/:
+    post:
+      summary: Logout user (invalidate token)
+      tags:
+        - Authentication
+      security:
+        - TokenAuth: []
+      responses:
+        '204':
+          description: Successfully logged out
+  /api/categories:
+    get:
+      summary: List all categories
+      tags:
+        - Categories
+      security:
+        - TokenAuth: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+              examples:
+                categoriesExample:
+                  value:
+                    - id: 1
+                      slug: "starters"
+                      title: "Starters"
+                    - id: 2
+                      slug: "main-courses"
+                      title: "Main Courses"
+    post:
+      summary: Create a new category
+      tags:
+        - Categories
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+            examples:
+              requestExample:
+                value:
+                  slug: "desserts"
+                  title: "Desserts"
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+              examples:
+                createdExample:
+                  value:
+                    id: 3
+                    slug: "desserts"
+                    title: "Desserts"
+        '400':
+          description: Invalid data
+  /api/menu-items:
+    get:
+      summary: List all menu items
+      tags:
+        - MenuItems
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category slug
+        - in: query
+          name: to_price
+          schema:
+            type: number
+          description: Filter by maximum price
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by menu item title
+        - in: query
+          name: ordering
+          schema:
+            type: string
+          description: Order by a field (e.g. price, title)
+      responses:
+        '200':
+          description: List of menu items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+              examples:
+                menuItemsExample:
+                  value:
+                    - id: 1
+                      title: "Pizza"
+                      price: 12.99
+                      featured: true
+                      category: "main-courses"
+                    - id: 2
+                      title: "Salad"
+                      price: 6.50
+                      featured: false
+                      category: "starters"
+    post:
+      summary: Create a new menu item
+      tags:
+        - MenuItems
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemInput'
+            examples:
+              requestExample:
+                value:
+                  title: "Soup"
+                  price: 5.00
+                  featured: false
+                  category: "starters"
+      responses:
+        '201':
+          description: Menu item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+              examples:
+                createdExample:
+                  value:
+                    id: 3
+                    title: "Soup"
+                    price: 5.00
+                    featured: false
+                    category: "starters"
+        '400':
+          description: Invalid data
+  /api/menu-items/{pk}:
+    get:
+      summary: Retrieve a menu item by ID
+      tags:
+        - MenuItems
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+          description: ID of the menu item
+      responses:
+        '200':
+          description: Menu item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+              examples:
+                menuItemExample:
+                  value:
+                    id: 1
+                    title: "Pizza"
+                    price: 12.99
+                    featured: true
+                    category: "main-courses"
+        '404':
+          description: Menu item not found
+    put:
+      summary: Update a menu item by ID
+      tags:
+        - MenuItems
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemInput'
+            examples:
+              requestExample:
+                value:
+                  title: "Updated Pizza"
+                  price: 13.99
+                  featured: false
+                  category: "main-courses"
+      responses:
+        '200':
+          description: Menu item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+              examples:
+                updatedExample:
+                  value:
+                    id: 1
+                    title: "Updated Pizza"
+                    price: 13.99
+                    featured: false
+                    category: "main-courses"
+        '400':
+          description: Invalid data
+        '404':
+          description: Menu item not found
+    delete:
+      summary: Delete a menu item by ID
+      tags:
+        - MenuItems
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Menu item deleted successfully
+        '404':
+          description: Menu item not found
+  /api/groups/manager/users:
+    get:
+      summary: List all users in the manager group
+      tags:
+        - ManagerGroup
+      security:
+        - TokenAuth: []
+      responses:
+        '200':
+          description: List of manager users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              examples:
+                managersExample:
+                  value:
+                    - id: 1
+                      username: "manager1"
+                      email: "manager1@example.com"
+                      groups: ["Manager"]
+    post:
+      summary: Assign a user to the manager group
+      tags:
+        - ManagerGroup
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAssignInput'
+            examples:
+              requestExample:
+                value:
+                  username: "user3"
+      responses:
+        '200':
+          description: User assigned to manager group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                successExample:
+                  value:
+                    message: "User assigned to manager group"
+        '404':
+          description: User not found
+  /api/groups/manager/users/{pk}:
+    delete:
+      summary: Remove a user from the manager group
+      tags:
+        - ManagerGroup
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User removed from manager group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                successExample:
+                  value:
+                    message: "User removed from manager group"
+        '400':
+          description: User is not in the manager group
+        '403':
+          description: Permission denied
+        '404':
+          description: User not found
+  /api/groups/delivery-crew/users:
+    get:
+      summary: List all users in the delivery crew group
+      tags:
+        - DeliveryCrewGroup
+      security:
+        - TokenAuth: []
+      responses:
+        '200':
+          description: List of delivery crew users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              examples:
+                deliveryCrewExample:
+                  value:
+                    - id: 3
+                      username: "crew1"
+                      email: "crew1@example.com"
+                      groups: ["Delivery crew"]
+    post:
+      summary: Assign a user to the delivery crew group
+      tags:
+        - DeliveryCrewGroup
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAssignInput'
+            examples:
+              requestExample:
+                value:
+                  username: "user5"
+      responses:
+        '200':
+          description: User assigned to delivery crew group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                successExample:
+                  value:
+                    message: "User assigned to delivery crew group"
+        '404':
+          description: User not found
+  /api/groups/delivery-crew/users/{pk}:
+    delete:
+      summary: Remove a user from the delivery crew group
+      tags:
+        - DeliveryCrewGroup
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User removed from delivery crew group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                successExample:
+                  value:
+                    message: "User removed from delivery crew group"
+        '400':
+          description: User is not in the delivery crew group
+        '403':
+          description: Permission denied
+        '404':
+          description: User not found
+  /api/cart/menu-items:
+    get:
+      summary: List all items in the user's cart
+      tags:
+        - Cart
+      security:
+        - TokenAuth: []
+      responses:
+        '200':
+          description: List of cart items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+              examples:
+                cartExample:
+                  value:
+                    - id: 1
+                      menuitem: 2
+                      quantity: 3
+                      unit_price: 6.50
+                      price: 19.50
+    post:
+      summary: Add an item to the cart
+      tags:
+        - Cart
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemInput'
+            examples:
+              requestExample:
+                value:
+                  menuitem: 2
+                  quantity: 3
+      responses:
+        '201':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+  /api/orders:
+    get:
+      summary: List all orders for the user
+      tags:
+        - Orders
+      security:
+        - TokenAuth: []
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+              examples:
+                ordersExample:
+                  value:
+                    - id: 1
+                      user: 1
+                      total: 25.00
+                      status: "pending"
+    post:
+      summary: Create a new order
+      tags:
+        - Orders
+      security:
+        - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+            examples:
+              requestExample:
+                value:
+                  cart: 1
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+  /api/orders/{pk}:
+    get:
+      summary: Retrieve an order by ID
+      tags:
+        - Orders
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    put:
+      summary: Update an order by ID
+      tags:
+        - Orders
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    delete:
+      summary: Delete an order by ID
+      tags:
+        - Orders
+      security:
+        - TokenAuth: []
+      parameters:
+        - in: path
+          name: pk
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Order deleted successfully
+components:
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        groups:
+          type: array
+          items:
+            type: string
+    UserRegisterInput:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - email
+        - password
+    UserAssignInput:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+        - username
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+    CategoryInput:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+      required:
+        - slug
+        - title
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        price:
+          type: number
+        featured:
+          type: boolean
+        category:
+          type: string
+    MenuItemInput:
+      type: object
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+        featured:
+          type: boolean
+        category:
+          type: string
+      required:
+        - title
+        - price
+        - category
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        menuitem:
+          type: integer
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+        price:
+          type: number
+    CartItemInput:
+      type: object
+      properties:
+        menuitem:
+          type: integer
+        quantity:
+          type: integer
+      required:
+        - menuitem
+        - quantity
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: integer
+        total:
+          type: number
+        status:
+          type: string
+    OrderInput:
+      type: object
+      properties:
+        cart:
+          type: integer
+      required:
+        - cart

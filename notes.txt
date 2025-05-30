@@ -1,0 +1,7 @@
+usernames:      passwords:      Role:
+David           pelusa44        Manager
+Daniel          pelumini85      Delivery crew
+Jose            minip@88        Delivery crew
+Peter           Pelusa44$%      Customer
+Nayibe          pelumini44$%    Manager
+admin           admin123        Superuser
