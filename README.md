@@ -29,7 +29,7 @@ Little Lemon API is designed to streamline restaurant operations by providing en
 
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/yourusername/little-lemon-api.git](https://github.com/Neyilson/LittlelemonAPI.git
+   git clone https://github.com/Neyilson/LittlelemonAPI.git
    cd little-lemon-api
    ```
 
